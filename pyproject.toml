@@ -1,0 +1,19 @@
+[project]
+name = "code-review-openenv"
+version = "0.1.0"
+description = "OpenEnv Code Review Simulation Environment"
+authors = [
+    { name = "Aakash Kumar Saw" }
+]
+dependencies = [
+    "pydantic",
+    "openai",
+    "openenv-core>=0.2.0"
+]
+
+[tool.openenv]
+entrypoint = "env.environment:CodeReviewEnv"
+
+[project.scripts]
+server = "server.app:main"
+

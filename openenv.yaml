@@ -1,0 +1,13 @@
+name: code-review-env
+description: Real-world AI code review simulation environment
+entrypoint: env.environment:CodeReviewEnv
+
+tasks:
+  - id: easy
+    description: Fix syntax errors
+
+  - id: medium
+    description: Optimize code performance
+
+  - id: hard
+    description: Refactor and improve code quality
