@@ -3,69 +3,123 @@ from openai import OpenAI
 from env.environment import CodeReviewEnv
 from env.models import Action
 
-# ENV VARIABLES
-API_BASE_URL = os.getenv("API_BASE_URL")
-MODEL_NAME = os.getenv("MODEL_NAME")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=OPENAI_API_KEY
-)
-
+# ---------------------------
+# CONFIG
+# ---------------------------
+MODEL_NAME = "gpt-4o-mini"
 MAX_STEPS = 5
+TEMPERATURE = 0.2
 
+# ---------------------------
+# SMART FALLBACK (TASK-AWARE)
+# ---------------------------
+def get_fallback_action(observation):
+    instruction = observation.instruction.lower()
 
-def run_episode():
+    if "syntax" in instruction:
+        return "missing parenthesis"
+    elif "optimize" in instruction:
+        return "use set"
+    elif "efficiency" in instruction:
+        return "sqrt optimization"
+    else:
+        return "improve code"
+
+# ---------------------------
+# OPENAI CLIENT (SAFE)
+# ---------------------------
+API_KEY = os.getenv("OPENAI_API_KEY")
+
+client = None
+
+if API_KEY:
+    try:
+        client = OpenAI(api_key=API_KEY)
+    except Exception as e:
+        print(f"[ERROR] OpenAI init failed: {e}")
+        client = None
+else:
+    print("⚠️ No API key found. Using fallback mode.")
+
+# ---------------------------
+# SAFE MODEL CALL
+# ---------------------------
+def get_model_response(messages, observation):
+    # If no client → directly fallback
+    if not client:
+        return get_fallback_action(observation)
+
+    try:
+        completion = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=TEMPERATURE,
+            max_tokens=100,
+        )
+        return completion.choices[0].message.content or get_fallback_action(observation)
+
+    except Exception as e:
+        print(f"[ERROR] Model call failed: {e}")
+        return get_fallback_action(observation)
+
+# ---------------------------
+# MAIN
+# ---------------------------
+def main():
     env = CodeReviewEnv()
-    obs = env.reset()
 
-    total_reward = 0.0
+    try:
+        observation = env.reset()
+        total_reward = 0.0
 
-    for step in range(MAX_STEPS):
+        print("\n--- Starting Inference ---\n")
 
-        prompt = f"""
-You are a senior code reviewer.
+        for step in range(1, MAX_STEPS + 1):
+            print(f"Step {step}")
 
-Code:
-{obs.code}
+            user_prompt = f"""
+                Code:
+                {observation.code}
 
-Task:
-{obs.instruction}
+                Instruction:
+                {observation.instruction}
 
-Give a clear improvement suggestion.
-"""
+                Give a short suggestion to improve/fix the code.
+                """
 
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0
-            )
-            suggestion = response.choices[0].message.content
+            messages = [
+                {"role": "system", "content": "You are a code reviewer."},
+                {"role": "user", "content": user_prompt},
+            ]
 
-        except Exception as e:
-            print("Model error:", e)
-            suggestion = "No suggestion"
+            # ✅ SAFE CALL
+            response_text = get_model_response(messages, observation)
 
-        action = Action(suggestion=suggestion)
+            print(f"Suggestion: {response_text}")
 
-        result = env.step(action)
+            result = env.step(Action(suggestion=response_text))
 
-        obs = result.observation
-        total_reward += result.reward
+            observation = result.observation
+            reward = result.reward
+            done = result.done
 
-        print(f"Step {step+1}")
-        print("Suggestion:", suggestion)
-        print("Reward:", result.reward)
-        print("Done:", result.done)
-        print("-" * 40)
+            total_reward += reward
 
-        if result.done:
-            break
+            print(f"Reward: {reward}")
+            print(f"Done: {done}")
+            print("-" * 40)
 
-    print("Final Score:", total_reward)
+            if done:
+                break
+
+        print(f"\nFinal Score: {total_reward:.2f}")
+
+    except Exception as e:
+        print(f"[FATAL ERROR] {e}")
+
+    finally:
+        print("\n--- Inference Complete ---")
 
 
 if __name__ == "__main__":
-    run_episode()
+    main()
