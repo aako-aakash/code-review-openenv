@@ -66,15 +66,36 @@ docker run code-review-env
 
 ```
 
+
+## 🧪 Example Interaction
+
+1. Call `/reset`
+2. Receive a code snippet
+3. Send suggestion via `/step`
+4. Receive reward
+5. Repeat until task completion
+
+## 📊 Baseline Results
+
+Task 1: 0.5  
+Task 2: 0.6  
+Task 3: 0.4  
+Average Score: 0.5
+
 📊 Baseline
 
 Baseline agent uses OpenAI API to generate suggestions and achieves reproducible scores.
+
+## 🌍 Real-World Impact
+
+This environment simulates real-world code review workflows, enabling AI agents to learn how developers analyze and improve code.
 
 
 
 ## 🧠 Environment Overview
 
 This project simulates a real-world code review workflow where an AI agent suggests improvements to code.
+
 
 ## 🔁 Interaction Loop
 

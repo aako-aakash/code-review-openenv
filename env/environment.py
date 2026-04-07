@@ -33,7 +33,9 @@ class CodeReviewEnv:
             observation=obs,
             reward=reward,
             done=done,
-            info={}
+            info={
+                "reason": "task_completed" if reward >= 1.0 else "in_progress"
+            }
         )
 
     def state(self):

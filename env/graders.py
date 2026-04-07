@@ -1,16 +1,12 @@
-def grade_action(task, action):
-    suggestion = action.suggestion.lower()
+def grade(task, suggestion: str):
+    suggestion = suggestion.lower()
+    solution = task["solution"].lower()
 
-    score = 0.0
-
-    # reward for matching expected keywords
-    matches = sum(1 for kw in task["expected_keywords"] if kw in suggestion)
-
-    if matches == len(task["expected_keywords"]):
-        score = 1.0
-    elif matches > 0:
-        score = 0.5
+    if solution in suggestion:
+        return 1.0
+    elif any(word in suggestion for word in solution.split()):
+        return 0.6
+    elif len(suggestion) > 10:
+        return 0.3
     else:
-        score = 0.1
-
-    return score
+        return 0.1

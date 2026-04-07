@@ -6,6 +6,13 @@ from env.models import Action
 app = FastAPI()
 env = CodeReviewEnv()
 
+@app.get("/")
+def home():
+    return {
+        "message": "Code Review OpenEnv is running 🚀",
+        "endpoints": ["/reset", "/step", "/state"]
+    }
+
 
 @app.post("/reset")
 def reset():
