@@ -1,62 +1,53 @@
-import sys
 import os
+import sys
 
 
-sys.stdout.reconfigure(line_buffering=True)
+def safe_print(msg):
+    sys.stdout.write(msg + "\n")
+    sys.stdout.flush()
+
+
+
+safe_print("[START] task=code_review")
 
 try:
     from env.environment import CodeReviewEnv
     from env.models import Action
-except Exception as e:
-    
-    print("[START] task=code_review", flush=True)
-    print("[END] task=code_review score=0.00 steps=0", flush=True)
-    sys.exit(0)
 
+    env = CodeReviewEnv()
+    observation = env.reset()
 
-def main():
-    print("[START] task=code_review", flush=True)
+    total_reward = 0.0
+    MAX_STEPS = 5
 
-    try:
-        env = CodeReviewEnv()
-        observation = env.reset()
+    for step in range(1, MAX_STEPS + 1):
 
-        total_reward = 0.0
-        MAX_STEPS = 5
+        # Simple fallback (no API dependency)
+        instruction = observation.instruction.lower()
 
-        for step in range(1, MAX_STEPS + 1):
+        if "syntax" in instruction:
+            suggestion = "missing parenthesis"
+        elif "optimize" in instruction:
+            suggestion = "use set"
+        elif "efficiency" in instruction:
+            suggestion = "sqrt optimization"
+        else:
+            suggestion = "improve code"
 
-           
-            instruction = observation.instruction.lower()
+        result = env.step(Action(suggestion=suggestion))
 
-            if "syntax" in instruction:
-                suggestion = "missing parenthesis"
-            elif "optimize" in instruction:
-                suggestion = "use set"
-            elif "efficiency" in instruction:
-                suggestion = "sqrt optimization"
-            else:
-                suggestion = "improve code"
+        observation = result.observation
+        reward = result.reward
+        done = result.done
 
-            result = env.step(Action(suggestion=suggestion))
+        total_reward += reward
 
-            observation = result.observation
-            reward = result.reward
-            done = result.done
+        safe_print(f"[STEP] step={step} reward={reward}")
 
-            total_reward += reward
+        if done:
+            break
 
-            print(f"[STEP] step={step} reward={reward}", flush=True)
+    safe_print(f"[END] task=code_review score={total_reward:.2f} steps={step}")
 
-            if done:
-                break
-
-        print(f"[END] task=code_review score={total_reward:.2f} steps={step}", flush=True)
-
-    except Exception:
-        
-        print("[END] task=code_review score=0.00 steps=0", flush=True)
-
-
-if __name__ == "__main__":
-    main()
+except Exception:
+    safe_print("[END] task=code_review score=0.00 steps=0")
