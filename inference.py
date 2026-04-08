@@ -47,7 +47,7 @@ def main():
     env = CodeReviewEnv()
     task_name = "code_review"
 
-    # ✅ MUST BE FIRST PRINT
+   
     print(f"[START] task={task_name}", flush=True)
 
     try:
