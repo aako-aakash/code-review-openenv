@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 from env.environment import CodeReviewEnv
 from env.models import Action
-
+import subprocess
 app = FastAPI()
 env = CodeReviewEnv()
 
@@ -40,3 +40,6 @@ def main():
 #  REQUIRED ENTRY POINT
 if __name__ == "__main__":
     main()
+
+if __name__ == "__main__":
+    subprocess.run(["python", "inference.py"])
