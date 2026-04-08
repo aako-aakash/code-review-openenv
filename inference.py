@@ -3,16 +3,9 @@ from openai import OpenAI
 from env.environment import CodeReviewEnv
 from env.models import Action
 
-# ---------------------------
-# CONFIG
-# ---------------------------
 MODEL_NAME = "gpt-4o-mini"
 MAX_STEPS = 5
-TEMPERATURE = 0.2
 
-# ---------------------------
-# FALLBACK
-# ---------------------------
 def get_fallback_action(observation):
     instruction = observation.instruction.lower()
 
@@ -25,21 +18,16 @@ def get_fallback_action(observation):
     else:
         return "improve code"
 
-# ---------------------------
-# OPENAI CLIENT
-# ---------------------------
 API_KEY = os.getenv("OPENAI_API_KEY")
-
 client = None
+
 if API_KEY:
     try:
         client = OpenAI(api_key=API_KEY)
     except Exception:
         client = None
 
-# ---------------------------
-# MODEL CALL
-# ---------------------------
+
 def get_model_response(messages, observation):
     if not client:
         return get_fallback_action(observation)
@@ -48,21 +36,18 @@ def get_model_response(messages, observation):
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=messages,
-            temperature=TEMPERATURE,
             max_tokens=100,
         )
         return completion.choices[0].message.content or get_fallback_action(observation)
-
     except Exception:
         return get_fallback_action(observation)
 
-# ---------------------------
-# MAIN
-# ---------------------------
+
 def main():
     env = CodeReviewEnv()
     task_name = "code_review"
 
+    # ✅ MUST BE FIRST PRINT
     print(f"[START] task={task_name}", flush=True)
 
     try:
@@ -71,24 +56,17 @@ def main():
 
         for step in range(1, MAX_STEPS + 1):
 
-            user_prompt = f"""
-Code:
-{observation.code}
-
-Instruction:
-{observation.instruction}
-
-Give a short suggestion.
-"""
-
             messages = [
                 {"role": "system", "content": "You are a code reviewer."},
-                {"role": "user", "content": user_prompt},
+                {
+                    "role": "user",
+                    "content": f"{observation.code}\n{observation.instruction}",
+                },
             ]
 
-            response_text = get_model_response(messages, observation)
+            response = get_model_response(messages, observation)
 
-            result = env.step(Action(suggestion=response_text))
+            result = env.step(Action(suggestion=response))
 
             observation = result.observation
             reward = result.reward
@@ -102,13 +80,15 @@ Give a short suggestion.
             if done:
                 break
 
+        
         print(
             f"[END] task={task_name} score={total_reward:.2f} steps={step}",
-            flush=True
+            flush=True,
         )
 
-    except Exception as e:
-        print(f"[ERROR] {e}", flush=True)
+    except Exception:
+        
+        print(f"[END] task={task_name} score=0.00 steps=0", flush=True)
 
 
 if __name__ == "__main__":
