@@ -11,7 +11,7 @@ MAX_STEPS = 5
 TEMPERATURE = 0.2
 
 # ---------------------------
-# SMART FALLBACK (TASK-AWARE)
+# FALLBACK
 # ---------------------------
 def get_fallback_action(observation):
     instruction = observation.instruction.lower()
@@ -26,26 +26,21 @@ def get_fallback_action(observation):
         return "improve code"
 
 # ---------------------------
-# OPENAI CLIENT (SAFE)
+# OPENAI CLIENT
 # ---------------------------
 API_KEY = os.getenv("OPENAI_API_KEY")
 
 client = None
-
 if API_KEY:
     try:
         client = OpenAI(api_key=API_KEY)
-    except Exception as e:
-        print(f"[ERROR] OpenAI init failed: {e}")
+    except Exception:
         client = None
-else:
-    print("⚠️ No API key found. Using fallback mode.")
 
 # ---------------------------
-# SAFE MODEL CALL
+# MODEL CALL
 # ---------------------------
 def get_model_response(messages, observation):
-    # If no client → directly fallback
     if not client:
         return get_fallback_action(observation)
 
@@ -58,8 +53,7 @@ def get_model_response(messages, observation):
         )
         return completion.choices[0].message.content or get_fallback_action(observation)
 
-    except Exception as e:
-        print(f"[ERROR] Model call failed: {e}")
+    except Exception:
         return get_fallback_action(observation)
 
 # ---------------------------
@@ -67,35 +61,32 @@ def get_model_response(messages, observation):
 # ---------------------------
 def main():
     env = CodeReviewEnv()
+    task_name = "code_review"
+
+    print(f"[START] task={task_name}", flush=True)
 
     try:
         observation = env.reset()
         total_reward = 0.0
 
-        print("\n--- Starting Inference ---\n")
-
         for step in range(1, MAX_STEPS + 1):
-            print(f"Step {step}")
 
             user_prompt = f"""
-                Code:
-                {observation.code}
+Code:
+{observation.code}
 
-                Instruction:
-                {observation.instruction}
+Instruction:
+{observation.instruction}
 
-                Give a short suggestion to improve/fix the code.
-                """
+Give a short suggestion.
+"""
 
             messages = [
                 {"role": "system", "content": "You are a code reviewer."},
                 {"role": "user", "content": user_prompt},
             ]
 
-            # ✅ SAFE CALL
             response_text = get_model_response(messages, observation)
-
-            print(f"Suggestion: {response_text}")
 
             result = env.step(Action(suggestion=response_text))
 
@@ -105,20 +96,19 @@ def main():
 
             total_reward += reward
 
-            print(f"Reward: {reward}")
-            print(f"Done: {done}")
-            print("-" * 40)
+            
+            print(f"[STEP] step={step} reward={reward}", flush=True)
 
             if done:
                 break
 
-        print(f"\nFinal Score: {total_reward:.2f}")
+        print(
+            f"[END] task={task_name} score={total_reward:.2f} steps={step}",
+            flush=True
+        )
 
     except Exception as e:
-        print(f"[FATAL ERROR] {e}")
-
-    finally:
-        print("\n--- Inference Complete ---")
+        print(f"[ERROR] {e}", flush=True)
 
 
 if __name__ == "__main__":
