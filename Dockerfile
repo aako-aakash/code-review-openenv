@@ -1,14 +1,9 @@
-FROM python:3.10
+FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY . .
+COPY . /app
 
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install fastapi uvicorn openenv-core
 
-EXPOSE 7860
-ENV PYTHONPATH=/app
-
-
-CMD ["python", "-m", "server.app"]
+CMD ["python", "inference.py"]
